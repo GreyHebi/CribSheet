@@ -7,3 +7,7 @@ spring:
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
+
+logging:
+  level:
+    ru.hebi: TRACE

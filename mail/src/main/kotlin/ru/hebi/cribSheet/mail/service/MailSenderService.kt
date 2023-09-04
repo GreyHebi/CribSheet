@@ -1,7 +1,6 @@
 package ru.hebi.cribSheet.mail.service
 
 import org.slf4j.LoggerFactory
-import org.springframework.core.io.FileSystemResource
 import org.springframework.mail.MailAuthenticationException
 import org.springframework.mail.MailSendException
 import org.springframework.mail.javamail.JavaMailSender
@@ -11,8 +10,11 @@ import jakarta.mail.MessagingException
 import java.lang.Exception
 
 
-private val logger = LoggerFactory.getLogger("ru.hebi.cribSheet.mail.service.MailSender")
+private val logger = LoggerFactory.getLogger(MailSenderService::class.java)
 
+/**
+ * Сервис по отправке сообщений по электронной почте
+ */
 @Component
 class MailSenderService(
     private val emailSender: JavaMailSender,
@@ -42,7 +44,7 @@ class MailSenderService(
  * @throws MessagingException          при ошибке в маппинге
  */
 private fun JavaMailSender.send(message: Message) {
-    val helper = MimeMessageHelper(createMimeMessage(), false)
+    val helper = MimeMessageHelper(createMimeMessage(), message.attachment.isNotEmpty())
     helper.setTo(message.recipient)
     helper.setSubject(message.subject)
     helper.setText(message.text)
@@ -52,8 +54,14 @@ private fun JavaMailSender.send(message: Message) {
     }
 
     message.attachment
-        .map { FileSystemResource(it) }
-        .forEach { helper.addAttachment(it.filename, it) }
+        .forEach { helper.addAttachment(it.filename(), it.source()) }
+
+    if (logger.isTraceEnabled) {
+        logger.trace("Начинается отправка электронного письма:\n$message")
+    }
+    else if (logger.isDebugEnabled) {
+        logger.debug("Начинается отправка электронного письма '${message.subject}' (${message.recipient})")
+    }
 
     send(helper.mimeMessage)
 }
