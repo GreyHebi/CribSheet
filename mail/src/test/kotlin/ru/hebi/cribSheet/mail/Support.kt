@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.context.annotation.Import
 import org.springframework.test.context.ActiveProfiles
-import ru.hebi.cribSheet.mail.service.GreenMailConfiguration
+import ru.hebi.cribSheet.mail.config.GreenMailConfiguration
 
 abstract class TestSupport
 
