@@ -44,8 +44,8 @@ class MailSenderService(
  * @throws MessagingException          при ошибке в маппинге
  */
 private fun JavaMailSender.send(message: Message) {
-    val helper = MimeMessageHelper(createMimeMessage(), message.attachment.isNotEmpty())
-    helper.setTo(message.recipient)
+    val helper = MimeMessageHelper(createMimeMessage(), message.attachments.isNotEmpty())
+    helper.setTo(message.recipients.toTypedArray())
     helper.setSubject(message.subject)
     helper.setText(message.text)
 
@@ -53,14 +53,14 @@ private fun JavaMailSender.send(message: Message) {
         helper.setFrom(message.from)
     }
 
-    message.attachment
+    message.attachments
         .forEach { helper.addAttachment(it.filename(), it.source()) }
 
     if (logger.isTraceEnabled) {
         logger.trace("Начинается отправка электронного письма:\n$message")
     }
     else if (logger.isDebugEnabled) {
-        logger.debug("Начинается отправка электронного письма '${message.subject}' (${message.recipient})")
+        logger.debug("Начинается отправка электронного письма '${message.subject}' (${message.recipients})")
     }
 
     send(helper.mimeMessage)

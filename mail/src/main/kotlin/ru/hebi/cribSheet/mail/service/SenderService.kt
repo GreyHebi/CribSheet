@@ -22,32 +22,88 @@ interface SenderService {
 
 /**
  * Сообщение
- *
- * @param attachment вложения
- * @param from       отправитель
- * @param recipient  получатель
- * @param subject    тема
- * @param text       сообщение
  */
-data class Message(
-    val subject: String,
-    val recipient: String,
-    val text: String,
+class Message private constructor(
     val from: String = "",
-    val attachment: MutableList<Attachment> = mutableListOf(),
+    val subject: String,
+    val text: String,
 ) {
 
-    /** Прикрепить файл */
-    fun addAttachment(path: Path): Message {
-        attachment.add(File(path))
-        return this
+    /**
+     * @param from        отправитель
+     * @param recipient   получатель
+     * @param subject     тема сообщения
+     * @param text        текст
+     * @param attachments вложения
+     */
+    constructor(
+        from: String = "",
+        recipient: String,
+        subject: String,
+        text: String,
+        attachments: Collection<Attachment> = listOf()
+    ) : this(from, listOf(recipient), subject, text, attachments)
+
+    /**
+     * @param from        отправитель
+     * @param recipients  получатели
+     * @param subject     тема сообщения
+     * @param text        текст
+     * @param attachments вложения
+     */
+    constructor(
+        from: String = "",
+        recipients: Collection<String>,
+        subject: String,
+        text: String,
+        attachments: Collection<Attachment> = listOf()
+    ) : this(from, subject, text) {
+        _recipients.addAll(recipients)
+        _attachments.addAll(attachments)
     }
 
-    /** Прикрепить файл */
-    fun addAttachment(filename: String, data: ByteArray): Message {
-        attachment.add(Byte(filename, data))
-        return this
+    private val _recipients: MutableSet<String> = mutableSetOf()
+    val recipients: Set<String>
+        get() = _recipients.toSet()
+
+    fun addRecipient(recipient: String) {
+        _recipients.add(recipient)
     }
+
+    private val _attachments: MutableList<Attachment> = mutableListOf()
+    val attachments: Set<Attachment>
+        get() = _attachments.toSet()
+
+    fun addAttachment(attachment: Attachment) {
+        _attachments.add(attachment)
+    }
+
+    override fun toString(): String {
+        return "Message(from='$from', recipients=$_recipients, subject='$subject', text='$text', attachments=$_attachments)"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Message
+
+        return from == other.from
+                && subject == other.subject
+                && text == other.text
+                && _recipients == other._recipients
+                && _attachments == other._attachments
+    }
+
+    override fun hashCode(): Int {
+        var result = from.hashCode()
+        result = 31 * result + subject.hashCode()
+        result = 31 * result + text.hashCode()
+        result = 31 * result + _recipients.hashCode()
+        result = 31 * result + _attachments.hashCode()
+        return result
+    }
+
 }
 
 /**
@@ -79,6 +135,12 @@ class File(private val path: Path) : Attachment {
 
 }
 
+/** Прикрепить файл */
+fun Message.addAttachment(path: Path) : Message {
+    addAttachment(File(path))
+    return this
+}
+
 /**
  * @param filename наименование файла
  * @param data     данные файла
@@ -92,4 +154,10 @@ class Byte(private val filename: String, private val data: ByteArray) : Attachme
         return "ByteAttachment(filename='$filename')"
     }
 
+}
+
+/** Прикрепить файл */
+fun Message.addAttachment(filename: String, data: ByteArray): Message {
+    addAttachment(Byte(filename, data))
+    return this
 }

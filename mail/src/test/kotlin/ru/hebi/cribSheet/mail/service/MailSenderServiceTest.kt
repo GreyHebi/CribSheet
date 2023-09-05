@@ -3,6 +3,7 @@ package ru.hebi.cribSheet.mail.service
 import com.icegreen.greenmail.spring.GreenMailBean
 import jakarta.mail.Session
 import jakarta.mail.internet.MimeMessage
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -23,6 +24,7 @@ import java.util.*
 
 private const val AUTHOR = "ivan@localhost"
 private const val RECIPIENT = "alex@localhost"
+private const val ANOTHER_RECIPIENT = "sergey@localhost"
 private const val SUBJECT = "Некая тема"
 private const val TEXT = "Какой-то длинный текст письма"
 private val ATTACHMENT = ByteAttachment("filename.txt", "Текст во вложении".toByteArray())
@@ -111,6 +113,18 @@ class MailSenderServiceUnitTest : UnitTest() {
         verify(sender).send(any(MimeMessage::class.java))
     }
 
+    @DisplayName("Отправка простого письма нескольким получателям")
+    @Test
+    fun `send simple message to several recipients`() {
+        target.send(Message(
+            recipients = listOf(RECIPIENT, ANOTHER_RECIPIENT),
+            subject = SUBJECT,
+            text = TEXT,
+        ))
+
+        verify(sender).send(any(MimeMessage::class.java))
+    }
+
     @DisplayName("Отправка сообщения с байтовым вложением")
     @Test
     fun `send with byte attachment`() {
@@ -153,38 +167,68 @@ class MailSenderServiceIntegrationTest : IntegrationTest() {
     lateinit var target: MailSenderService
 
     @BeforeEach fun before() {
+        if (!greenMailBean.isStarted) greenMailBean.afterPropertiesSet()
         assertTrue(greenMailBean.isStarted)
+    }
+
+    @AfterEach fun after() {
+        //таким нехитрым образом ребутаем smtp-сервер
+        greenMailBean.stop()
     }
 
     @DisplayName("Отправка простого письма")
     @Test
     fun `send simple message`() {
+        val subject = "тема простого письмеца"
+        val text = "тело простенького письмеца"
         val actual = target.send(Message(
                 recipient = RECIPIENT,
-                subject = SUBJECT,
-                text = TEXT,
+                subject = subject,
+                text = text,
         ))
 
         assertTrue(actual)
-        greenMailBean.receivedMessages.forEach {
-            assertAll("mail",
-                { assertEquals(SUBJECT, it.subject) },
-                { assertEquals(RECIPIENT, it.allRecipients.first().toString()) },
-                { assertEqualsContent(TEXT, it) },
-            )
-        }
+        val actualMail = greenMailBean.receivedMessages.last()
+        assertAll("mail",
+            { assertEquals(RECIPIENT, actualMail.allRecipients.first().toString()) },
+            { assertEquals(subject, actualMail.subject) },
+            { assertEqualsSimpleContent(text, actualMail) },
+        )
+    }
+
+    @DisplayName("Отправка простого письма нескольким получателям")
+    @Test
+    fun `send simple message to several recipients`() {
+        val subject = "тема простого письмеца для нескольких получателей"
+        val text = "тело простенького письмеца для нескольких получателей"
+        val recipients = setOf(RECIPIENT, ANOTHER_RECIPIENT)
+        val actual = target.send(Message(
+            recipients = recipients,
+            subject = subject,
+            text = text,
+        ))
+
+        assertTrue(actual)
+        val actualMail = greenMailBean.receivedMessages.last()
+        assertAll("mail",
+            { assertEquals(recipients, actualMail.allRecipients.map { it.toString() }.toSet()) },
+            { assertEquals(subject, actualMail.subject) },
+            { assertEqualsSimpleContent(text, actualMail) },
+        )
     }
 
     @DisplayName("Отправка письма с байтовым вложением")
     @Test
     fun `send with byte attachment`() {
+        val subject = "темка письмеца с байтовым вложением"
+        val text = "тельце письмеца"
         val attachment = Byte(ATTACHMENT.filename, ATTACHMENT.data)
         val message = Message(
             from = AUTHOR,
             recipient = RECIPIENT,
-            subject = SUBJECT,
-            text = TEXT,
-            attachment = mutableListOf(attachment),
+            subject = subject,
+            text = text,
+            attachments = listOf(attachment),
         )
 
         val actual = target.send(message)
@@ -194,8 +238,8 @@ class MailSenderServiceIntegrationTest : IntegrationTest() {
         assertAll("mail",
             { assertEquals(AUTHOR, actualMail.from.first().toString()) },
             { assertEquals(RECIPIENT, actualMail.allRecipients.first().toString()) },
-            { assertEquals(SUBJECT, actualMail.subject) },
-            { assertEqualsContent(TEXT, actualMail) },
+            { assertEquals(subject, actualMail.subject) },
+            { assertEqualsContent(text, actualMail) },
             { assertEqualsAttachment(attachment, actualMail) }
         )
     }
@@ -203,13 +247,15 @@ class MailSenderServiceIntegrationTest : IntegrationTest() {
     @DisplayName("Отправка письма с вложенным файлом")
     @Test
     fun `send with file attachment`() {
+        val subject = "темка письмеца с файлом"
+        val text = "тельце письмеца, а дальше файлик"
         val attachment = File(path(FILENAME))
         val message = Message(
             from = AUTHOR,
             recipient = RECIPIENT,
-            subject = SUBJECT,
-            text = TEXT,
-            attachment = mutableListOf(attachment),
+            subject = subject,
+            text = text,
+            attachments = listOf(attachment)
         )
 
         val actual = target.send(message)
@@ -219,8 +265,8 @@ class MailSenderServiceIntegrationTest : IntegrationTest() {
         assertAll("mail",
             { assertEquals(AUTHOR, actualMail.from.first().toString()) },
             { assertEquals(RECIPIENT, actualMail.allRecipients.first().toString()) },
-            { assertEquals(SUBJECT, actualMail.subject) },
-            { assertEqualsContent(TEXT, actualMail) },
+            { assertEquals(subject, actualMail.subject) },
+            { assertEqualsContent(text, actualMail) },
             { assertEqualsAttachment(attachment, actualMail) }
         )
     }
@@ -239,7 +285,10 @@ private fun assertEqualsContent(expected: String, actual: MimeMessage) {
        что ожидаемый текст присутствует(!) в теле письма */
     val expectedInBase64 = Base64.getEncoder().encodeToString(expected.toByteArray())
     val message = actual.contentInString()
-    assertTrue(message.contains(expectedInBase64)) {
+
+    /* есть переносы строк в теле сообщения, из-за чего падали тесты при длинных отправляемых сообщениях
+       добавил сюда, чтоб не портить логирование ошибки */
+    assertTrue(message.replace("\\s+".toRegex(), "").contains(expectedInBase64)) {
         "В сообщении '$message' отсутствует ожидаемый текст сообщения '$expected' (в Base64: '$expectedInBase64')"
     }
 }
@@ -263,6 +312,14 @@ private fun assertEqualsAttachment(expected: Attachment, actual: MimeMessage) {
             }
         },
     )
+}
+
+//Проверка простых писем, без вложений
+private fun assertEqualsSimpleContent(expected: String, actual: MimeMessage) {
+    val rm = actual.contentInString().replace("\\s+".toRegex(), "")
+    val rawMessage = Base64.getDecoder().decode(rm.toByteArray())
+    val message = String(rawMessage)
+    assertEquals(expected, message)
 }
 
 private fun MimeMessage.contentInString() = String(rawInputStream.readAllBytes())

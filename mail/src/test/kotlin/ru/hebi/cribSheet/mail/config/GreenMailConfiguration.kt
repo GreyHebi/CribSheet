@@ -10,7 +10,8 @@ class GreenMailConfiguration {
     fun greenMailBean() = GreenMailBean().apply {
         users = listOf(
             "ivan:12345@localhost",
-            "alex:09876@localhost"
+            "alex:09876@localhost",
+            "sergey:13579@localhost",
         )
         hostname = "127.0.0.1"
         portOffset = 3000
