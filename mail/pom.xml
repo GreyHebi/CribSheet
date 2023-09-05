@@ -16,6 +16,9 @@
     <name>Crib Sheet - Mail</name>
     <description>Шпаргалка - электронная почта</description>
 
+    <properties>
+        <green-mail.version>2.0.0</green-mail.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -31,13 +34,13 @@
         <dependency>
             <groupId>com.icegreen</groupId>
             <artifactId>greenmail</artifactId>
-            <version>2.0.0</version>
+            <version>${green-mail.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.icegreen</groupId>
             <artifactId>greenmail-spring</artifactId>
-            <version>2.0.0</version>
+            <version>${green-mail.version}</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
