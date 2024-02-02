@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package ru.hebi.cribSheet.grpc;
+
+import "model.proto";
+
+//Тестовый сервис, для проверки возможностей gRPC
+service TestService {
+  //Синхронное взаимодействие
+  rpc call(ru.hebi.cribSheet.grpc.dto.Request) returns (ru.hebi.cribSheet.grpc.dto.Response);
+  //Отправка потока
+  rpc putStream(stream ru.hebi.cribSheet.grpc.dto.Request) returns (ru.hebi.cribSheet.grpc.dto.Response);
+  //Получение потока
+  rpc getStream(ru.hebi.cribSheet.grpc.dto.Request) returns (stream ru.hebi.cribSheet.grpc.dto.Response);
+  //Потоковая работа туда-сюда
+  rpc streamCall(stream ru.hebi.cribSheet.grpc.dto.Request) returns (stream ru.hebi.cribSheet.grpc.dto.Response);
+}

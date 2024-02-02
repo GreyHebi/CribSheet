@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package ru.hebi.cribSheet.grpc.dto;
+
+import "google/protobuf/timestamp.proto";
+
+//Наименование пакета, в который сгенерируются модели
+option java_package = "ru.hebi.cribSheet.grpc.dto";
+//Опция, разделяющая каждую модель верхнего порядка на отдельные Java классы
+option java_multiple_files = true;
+
+/* Запрос */
+message Request {
+  //UUID идентификатор запроса
+  UUID rqUid = 1;
+  //Время подготовки запроса
+  google.protobuf.Timestamp rqTm = 2;
+  //Логин пользователя | ^[A-Za-z][A-Za-z0-9.-]{3,15}$
+  string login = 3;
+}
+
+/* Ответ */
+message Response {
+  //Список сообщений
+  repeated string msgs = 1;
+}
+
+//для UUID нет реализации, поэтому генерируем такой объект
+/*UUID*/
+message UUID {
+  string value = 1;
+}
