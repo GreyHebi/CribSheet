@@ -12,6 +12,7 @@
     <groupId>ru.hebi.crib-sheet</groupId>
     <artifactId>grpc</artifactId>
     <packaging>pom</packaging>
+
     <modules>
         <module>client</module>
     </modules>
